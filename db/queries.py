@@ -103,7 +103,7 @@ def obtener_nombre_usuario(id: str):
     else:
         raise Exception("Usuario no encontrado.")
     
-def obtener_id_usuario(email: str):
+def obtener_id_usuario(id: str):
     conn = conectar_db()
     cur = conn.cursor()
     cur.execute("""
@@ -162,16 +162,105 @@ def obtener_disenos_por_id(disenio_id: str):
 
 def obtener_horarios_ocupados(fecha: str):
     """
-    Consulta en la base de datos las horas ya ocupadas para una fecha específica.
-    Suponiendo que guardas en tabla 'citas' con columnas (fecha, hora_inicio).
+    Devuelve lista de horas ocupadas en formato 'HH:MM' para la fecha indicada.
     """
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT hora 
+            FROM agendamientos 
+            WHERE fecha = %s;
+        """, (fecha,))
+        resultados = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        horas = []
+        for r in resultados:
+            valor = r[0]
+            if hasattr(valor, "strftime"):  # tipo datetime.time
+                horas.append(valor.strftime("%H:%M"))
+            elif isinstance(valor, str):  # tipo texto en DB
+                horas.append(valor[:5])  # "HH:MM:SS" → "HH:MM"
+        return horas
+
+    except Exception as e:
+        print("Error al obtener horarios ocupados:", e)
+        return []
+
+
+
+def obtener_tintes():
     conn = conectar_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT hora FROM agendamientos WHERE fecha = %s;
-    """, (fecha,))
+        SELECT id, nombre, descripcion, imagen FROM tintes;
+    """)
     resultados = cur.fetchall()
     cur.close()
     conn.close()
+    tintes = []
+    for fila in resultados:
+        tinte = {
+            "id": fila[0],
+            "nombre": fila[1],
+            "descripcion": fila[2],
+            "imagen": fila[3]
+        }
+        tintes.append(tinte)
+    return tintes
 
-    return [r[0].strftime("%H:%M") if hasattr(r[0], "strftime") else r[0][:5] for r in resultados]
+def crear_agendamiento(usuario_id, diseno_id, fecha, hora, estado="pendiente"):
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            INSERT INTO agendamientos (usuario_id, diseno_id, fecha, hora, estado)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+        """
+        cur.execute(query, (usuario_id, diseno_id, fecha, hora, estado))
+        nuevo_id = cur.fetchone()[0]
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return nuevo_id
+    except Exception as e:
+        print("Error al crear agendamiento:", e)
+        return None
+    
+def crear_agendamiento_con_tintes(usuario_id, diseno_id, fecha, hora, tintes_ids: list, estado="pendiente"):
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        # 1. Crear agendamiento
+        query_agendamiento = """
+            INSERT INTO agendamientos (usuario_id, diseno_id, fecha, hora, estado)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+        """
+        cur.execute(query_agendamiento, (usuario_id, diseno_id, fecha, hora, estado))
+        nuevo_agendamiento_id = cur.fetchone()[0]
+
+        # 2. Asociar tintes si hay
+        if tintes_ids:
+            query_tintes = """
+                INSERT INTO agendamiento_tinte (agendamiento_id, tinte_id)
+                VALUES (%s, %s);
+            """
+            for tinte_id in tintes_ids:
+                cur.execute(query_tintes, (nuevo_agendamiento_id, tinte_id))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return nuevo_agendamiento_id
+    except Exception as e:
+        print("Error al crear agendamiento con tintes:", e)
+        return None

@@ -5,7 +5,7 @@ import jwt
 from jwt import ExpiredSignatureError
 from jwt.exceptions import InvalidTokenError
 from fastapi.security import OAuth2PasswordBearer
-from db.queries import obtener_disenos, obtener_disenos_por_id
+from db.queries import obtener_disenos, obtener_disenos_por_id, obtener_tintes
 import os
 
 router = APIRouter(prefix="/diseno", tags=["diseno"])
@@ -24,5 +24,13 @@ async def get_diseno(diseno_id):
         disenos = obtener_disenos_por_id(diseno_id)
         return {"diseno": disenos}
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+@router.get("/get_tintes")
+async def get_tintes():
+    try:
+        tintes = obtener_tintes()
+        return {"tintes": tintes}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))

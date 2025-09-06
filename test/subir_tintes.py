@@ -1,5 +1,5 @@
 from db.queries import obtener_disenos, obtener_disenos_por_id, obtener_horarios_ocupados
-from models.agendamiento import horas_disponibles
+from models.agendamiento import obtener_horas_disponibles
 
 
 def obtener_diseno_test():
@@ -18,8 +18,8 @@ def obtener_horarios_ocupados_test(fecha):
 
 def obtener_horarios_libre_test(fecha):
     
-    horarios = horas_disponibles(fecha)
+    horarios = obtener_horas_disponibles(fecha)
     return horarios
 
-print(obtener_horarios_libre_test("2025-09-05"))
+print(obtener_horarios_libre_test("2025-09-12"))
 

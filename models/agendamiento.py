@@ -6,7 +6,7 @@ from jwt.exceptions import InvalidTokenError
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from typing import List
-from db.queries import obtener_horarios_ocupados
+from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes
 import os
 
 
@@ -34,3 +34,45 @@ def obtener_horas_disponibles(fecha: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+    
+
+
+def validar_datos_agendamiento(fecha, hora, tintes_ids: list, max_tintes: int):
+    """
+    Valida los datos de un agendamiento SIN tocar la base de datos.
+    """
+    # 1. Validar tintes
+    if tintes_ids:
+        if len(tintes_ids) > max_tintes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El diseño solo permite {max_tintes} tintes como máximo"
+            )
+
+        if len(tintes_ids) != len(set(tintes_ids)):
+            raise HTTPException(
+                status_code=400,
+                detail="Hay tintes repetidos en la lista"
+            )
+
+    # 2. Validar fecha y hora
+    try:
+        fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+        hora_obj = datetime.strptime(hora, "%H:%M").time()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha u hora inválido")
+
+    hoy = datetime.now().date()
+    if fecha_obj < hoy:
+        raise HTTPException(status_code=400, detail="La fecha ya pasó")
+
+    # ✅ Si pasa todo, retorno True
+    return True
+
+
+def agendar(usuario_id, diseno_id, fecha, hora, tintes_ids, max_tintes):
+    # 1. Validar sin DB
+    validar_datos_agendamiento(fecha, hora, tintes_ids, max_tintes)
+
+    # 2. Insertar en DB
+    return crear_agendamiento_con_tintes(usuario_id, diseno_id, fecha, hora, tintes_ids)
