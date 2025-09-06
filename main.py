@@ -6,6 +6,13 @@ from services import diseno
 from services import agendamiento
 app = FastAPI()
 
+# Orígenes permitidos
+origins = [
+    "http://localhost:3000",  # frontend dev
+    "http://127.0.0.1:3000", # otro posible host local
+    # puedes poner "*" en desarrollo, pero no en producción
+]
+
 # CORS para permitir peticiones desde React
 app.add_middleware(
     CORSMiddleware,

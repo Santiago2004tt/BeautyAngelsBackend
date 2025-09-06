@@ -17,3 +17,5 @@ def test_validate():
         print("Token:", sesion["access_token"])
         print("Usuario:", sesion["user"])
         print("Token de actualización:", sesion["refresh_token"])
+
+test_validate()

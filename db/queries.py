@@ -174,4 +174,4 @@ def obtener_horarios_ocupados(fecha: str):
     cur.close()
     conn.close()
 
-    return [r[0] for r in resultados]  # lista de horas ocupadas (ej: "10:00")
+    return [r[0].strftime("%H:%M") if hasattr(r[0], "strftime") else r[0][:5] for r in resultados]
