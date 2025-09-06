@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
-import uuid
+
 
 
 def conectar_db():
