@@ -9,7 +9,8 @@ app = FastAPI()
 # Orígenes permitidos
 origins = [
     "http://localhost:3000",  # frontend dev
-    "http://127.0.0.1:3000", # otro posible host local
+    "http://127.0.0.1:3000",
+     "https://beauty-angels-frontend.vercel.app" # otro posible host local
     # puedes poner "*" en desarrollo, pero no en producción
 ]
 
@@ -17,7 +18,8 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000",
-        "http://127.0.0.1:3000",],  # puerto donde corre tu React
+        "http://127.0.0.1:3000",
+        "https://beauty-angels-frontend.vercel.app"],  # puerto donde corre tu React
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
