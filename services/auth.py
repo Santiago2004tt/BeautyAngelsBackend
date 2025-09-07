@@ -1,12 +1,6 @@
-from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-import jwt
-from jwt import ExpiredSignatureError
-from jwt.exceptions import InvalidTokenError
-from fastapi.security import OAuth2PasswordBearer
 from models.user import crear_usuario, iniciar_sesion
-import os
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
