@@ -1,15 +1,11 @@
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
-import jwt
-from jwt import ExpiredSignatureError
-from jwt.exceptions import InvalidTokenError
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException
 from datetime import datetime, timedelta
 from typing import List
-from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes
-import os
+from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes, obtener_fechas_horas_por_auth_id
+from datetime import datetime
+from typing import List, Optional, Dict
 
-
+#Obtiene las horas disponibles para una fecha dada
 def obtener_horas_disponibles(fecha: str):
     try:
         fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
@@ -36,13 +32,16 @@ def obtener_horas_disponibles(fecha: str):
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
     
 
-
+#Valida los datos de un agendamiento sin tocar la base de datos
 def validar_datos_agendamiento(fecha, hora, tintes_ids: list, max_tintes: int):
     """
     Valida los datos de un agendamiento SIN tocar la base de datos.
     """
     # 1. Validar tintes
     if tintes_ids:
+        if len(tintes_ids) == 0:
+            raise HTTPException(status_code=400, detail="Debe elegir al menos un tinte")
+
         if len(tintes_ids) > max_tintes:
             raise HTTPException(
                 status_code=400,
@@ -69,10 +68,49 @@ def validar_datos_agendamiento(fecha, hora, tintes_ids: list, max_tintes: int):
     # ✅ Si pasa todo, retorno True
     return True
 
-
+# Función principal para agendar
 def agendar(usuario_id, diseno_id, fecha, hora, tintes_ids, max_tintes):
     # 1. Validar sin DB
     validar_datos_agendamiento(fecha, hora, tintes_ids, max_tintes)
 
     # 2. Insertar en DB
     return crear_agendamiento_con_tintes(usuario_id, diseno_id, fecha, hora, tintes_ids)
+
+#Funcion para obtener agendamientos de un usuario
+def obtener_agendamientos_usuario(usuario_id: int):
+  
+    return obtener_fechas_horas_por_auth_id(usuario_id)
+
+
+#Función para obtener el agendamiento más próximo de una lista
+def obtener_agendamiento_mas_proximo(agendamientos: List[Dict[str, str]]) -> Optional[Dict[str, str]]:
+    """
+    Retorna el agendamiento con la fecha y hora más próxima (>= ahora).
+
+    Parámetros:
+        agendamientos: Lista de dicts con claves 'fecha' (YYYY-MM-DD) y 'hora' (HH:MM).
+
+    Retorna:
+        dict | None: El agendamiento más próximo o None si no hay futuros.
+    """
+    ahora = datetime.now()
+
+    agendamientos_futuros = []
+    for ag in agendamientos:
+        try:
+            fecha_hora = datetime.strptime(f"{ag['fecha']} {ag['hora']}", "%Y-%m-%d %H:%M")
+            if fecha_hora >= ahora:
+                agendamientos_futuros.append((ag, fecha_hora))
+        except ValueError:
+            continue  # Ignora agendamientos con formato inválido
+
+    if not agendamientos_futuros:
+        return None
+
+    # Retornar el más próximo
+    return min(agendamientos_futuros, key=lambda x: x[1])[0]
+
+#Obtener el agendamiento más próximo de un usuario
+def obtener_agendamiento_proximo_por_usuario(usuario_id: int) -> Optional[dict]:
+    agendamientos = obtener_agendamientos_usuario(usuario_id)
+    return obtener_agendamiento_mas_proximo(agendamientos)

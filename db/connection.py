@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import psycopg2
 
 
-
+### Conexión a la base de datos
 def conectar_db():
     # 1) Cargar variables
     load_dotenv()
