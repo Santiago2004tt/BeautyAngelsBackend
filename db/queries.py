@@ -257,23 +257,32 @@ def crear_agendamiento_con_tintes(usuario_id, diseno_id, fecha, hora, tintes_ids
         cur.execute(query_agendamiento, (usuario_id, diseno_id, fecha, hora, estado))
         nuevo_agendamiento_id = cur.fetchone()[0]
 
-        # 2. Asociar tintes si hay
+        # 2. Asociar tintes y actualizar cantidad
         if tintes_ids:
             query_tintes = """
                 INSERT INTO agendamiento_tinte (agendamiento_id, tinte_id)
                 VALUES (%s, %s);
             """
+            query_restar_cant = """
+                UPDATE tintes
+                SET cant = GREATEST(cant - 1, 0)
+                WHERE id = %s;
+            """
+
             for tinte_id in tintes_ids:
                 cur.execute(query_tintes, (nuevo_agendamiento_id, tinte_id))
+                cur.execute(query_restar_cant, (tinte_id,))
 
         conn.commit()
         cur.close()
         conn.close()
 
         return nuevo_agendamiento_id
+
     except Exception as e:
-        print("Error al crear agendamiento con tintes:", e)
+        print("❌ Error al crear agendamiento con tintes:", e)
         return None
+
     
 # Obtener fechas y horas de agendamientos por auth_user_id
 def obtener_fechas_horas_por_auth_id(auth_user_id: str):
@@ -318,24 +327,26 @@ def guardar_codigo_verificacion(id_usuario: str, codigo: str):
     conn.close()
     return actualizado_id
 
-# Obtener correo de usuario por id_usuario
+# Obtener correo del usuario a partir del id_usuario
 def obtener_correo_usuario(id_usuario: str):
     conn = conectar_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT nombre
-        FROM usuarios
-        WHERE id = %s;
+        SELECT au.email
+        FROM auth.users au
+        JOIN usuarios u ON u.auth_id = au.id
+        WHERE u.id = %s;
     """, (id_usuario,))
+    
     resultado = cur.fetchone()
     cur.close()
     conn.close()
 
     if resultado:
-        return resultado[0]  # Retorna el correo (o nombre si la columna es diferente)
+        return resultado[0]  # Retorna el correo real
     else:
         return None
-
+    
 # Obtener código de verificación por id_usuario  
 def obtener_codigo_verificacion(id_usuario: str):
     conn = conectar_db()
@@ -354,15 +365,16 @@ def obtener_codigo_verificacion(id_usuario: str):
     else:
         return None
     
-#Obtener datos de usuario por auth_id
-def obtener_datos_usuario_por_auth_id(auth_id: str):
+#Obtener datos de usuario por id
+def obtener_datos_usuario_por_id(id_usuario: str):
+
     conn = conectar_db()
     cur = conn.cursor()
     cur.execute("""
         SELECT id, nombre, telefono, rol, creado_en
         FROM usuarios
-        WHERE auth_id = %s;
-    """, (auth_id,))
+        WHERE id = %s;
+    """, (id_usuario,))
     resultado = cur.fetchone()
     cur.close()
     conn.close()
@@ -373,7 +385,8 @@ def obtener_datos_usuario_por_auth_id(auth_id: str):
             "nombre": resultado[1],
             "telefono": resultado[2],
             "rol": resultado[3],
-            "creado_en": resultado[4].strftime("%Y-%m-%d %H:%M:%S")
+            "creado_en": resultado[4].strftime("%Y-%m-%d %H:%M:%S"),
+            "correo": obtener_correo_usuario(resultado[0])
         }
         return usuario
     else:

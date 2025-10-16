@@ -5,7 +5,7 @@ from exception.user_exception import (
     CampoVacio,
 )
 from models.user_service import verificar_contrasenia_escrito, verificar_email
-from db.queries import registrar_usuario, iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_datos_usuario_por_auth_id, obtener_agendamientos_por_usuario_id
+from db.queries import registrar_usuario, obtener_datos_usuario_por_id ,iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_agendamientos_por_usuario_id
 import smtplib
 import random
 import os
@@ -64,7 +64,7 @@ def generar_codigo_verificacion(id_auth: str):
         guardar_codigo_verificacion(id_usuario, codigo)
         enviar_correo(destinatario, codigo)
 
-
+#Verificar código de verificación
 def verificar_codigo(id_auth: str, codigo: str):
     id_usuario = obtener_id_usuario(id_auth)
     if(id_usuario == ""):
@@ -91,11 +91,11 @@ def enviar_correo(destinatario, codigo):
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #f4f4f7; padding: 20px;">
         <div style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 30px; text-align: center;">
-            <h2 style="color: #4CAF50;">¡Hola!</h2>
+            <h2 style="color: #c69838;">¡Hola!</h2>
             <p style="font-size: 16px; color: #555;">
                 Tu <strong>código de verificación</strong> es:
             </p>
-            <div style="font-size: 36px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+            <div style="font-size: 36px; font-weight: bold; color: #c69838; margin: 20px 0;">
                 {codigo}
             </div>
             <p style="font-size: 14px; color: #999;">
@@ -133,20 +133,25 @@ def enviar_correo(destinatario, codigo):
 #Obtener datos del usuario
 def obtener_datos_usuario(id_auth: str):
     id_usuario = obtener_id_usuario(id_auth)
-    if(id_usuario == ""):
-        raise UsuarioError("El id no puede estar vacío.")
-    else:
-        correo = obtener_correo_usuario(id_usuario)
-        nombre = obtener_nombre_usuario(id_usuario)
-        return {
-            "id": id_usuario,
-            "correo": correo,
-            "nombre": nombre
-        }
     
+    if not id_usuario or id_usuario == "":
+        raise UsuarioError("El id_auth no puede estar vacío o no corresponde a ningún usuario.")
+    
+    # Llamamos a la función que obtiene los datos por id de usuario
+    datos_usuario = obtener_datos_usuario_por_id(id_usuario)
+
+    if not datos_usuario:
+        raise UsuarioError("No se encontraron datos para el usuario especificado.")
+    
+    return datos_usuario
+
+
+#Obtener agendamientos del usuario 
 def obtener_agendamientos(id_auth: str):
     id_usuario = obtener_id_usuario(id_auth)
     if(id_usuario == ""):
         raise UsuarioError("El id no puede estar vacío.")
     else:
         return obtener_agendamientos_por_usuario_id(id_usuario)
+    
+

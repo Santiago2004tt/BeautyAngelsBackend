@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from datetime import datetime, timedelta
 from typing import List
-from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes, obtener_fechas_horas_por_auth_id
+from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes, obtener_fechas_horas_por_auth_id,obtener_id_usuario
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -110,7 +110,10 @@ def obtener_agendamiento_mas_proximo(agendamientos: List[Dict[str, str]]) -> Opt
     # Retornar el más próximo
     return min(agendamientos_futuros, key=lambda x: x[1])[0]
 
+
 #Obtener el agendamiento más próximo de un usuario
-def obtener_agendamiento_proximo_por_usuario(usuario_id: int) -> Optional[dict]:
-    agendamientos = obtener_agendamientos_usuario(usuario_id)
+def obtener_agendamiento_proximo_por_usuario(auth_id: int) -> Optional[dict]:
+    agendamientos = obtener_agendamientos_usuario(auth_id)
     return obtener_agendamiento_mas_proximo(agendamientos)
+
+
