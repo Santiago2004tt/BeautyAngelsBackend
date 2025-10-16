@@ -430,3 +430,22 @@ def obtener_agendamientos_por_usuario_id(usuario_id: str):
 
     return agendamientos
 
+# Obtener rol del usuario a partir del correo
+def obtener_rol_correo_query(correo: str):
+    conn = conectar_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT u.rol
+        FROM usuarios u
+        JOIN auth.users au ON u.auth_id = au.id
+        WHERE au.email = %s;
+    """, (correo,))
+    
+    resultado = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if resultado:
+        return resultado[0]  # Retorna el rol
+    else:
+        return None

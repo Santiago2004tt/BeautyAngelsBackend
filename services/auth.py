@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from models.user import crear_usuario, iniciar_sesion
+from models.user import crear_usuario, iniciar_sesion, obtener_rol_correo
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,3 +34,15 @@ async def login(user: UserLogin):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+
+@router.post("/login_admin")
+async def login_admin(user: UserLogin):
+    try:
+        rol = obtener_rol_correo(user.email)
+        print(rol)
+        if(rol != "admin"):
+            raise HTTPException(status_code=403, detail="Acceso denegado: No es un usuario administrador")
+        sesion = iniciar_sesion(user.email, user.password)
+        return {"message": "Sesión de administrador iniciada exitosamente", "session": sesion}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

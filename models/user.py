@@ -5,7 +5,7 @@ from exception.user_exception import (
     CampoVacio,
 )
 from models.user_service import verificar_contrasenia_escrito, verificar_email
-from db.queries import registrar_usuario, obtener_datos_usuario_por_id ,iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_agendamientos_por_usuario_id
+from db.queries import registrar_usuario, obtener_rol_correo_query,obtener_datos_usuario_por_id ,iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_agendamientos_por_usuario_id
 import smtplib
 import random
 import os
@@ -155,3 +155,7 @@ def obtener_agendamientos(id_auth: str):
         return obtener_agendamientos_por_usuario_id(id_usuario)
     
 
+def obtener_rol_correo(correo: str):
+    if (not verificar_email(correo)) :
+        raise CorreoInvalido("El correo no cumple con el formato adecuado.")
+    return obtener_rol_correo_query(correo)
