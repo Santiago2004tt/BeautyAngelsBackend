@@ -6,7 +6,7 @@ from jwt.exceptions import InvalidTokenError
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from typing import List
-from models.agendamiento import obtener_horas_disponibles, agendar, obtener_agendamiento_proximo_por_usuario
+from models.agendamiento import obtener_horas_disponibles, agendar, obtener_agendamiento_proximo_por_usuario, cancelar_agendamiento_ver
 from db.queries import obtener_id_usuario
 import os
 
@@ -76,3 +76,25 @@ async def obtener_agendamiento_proximo_service(request: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.post("/cancelar_agendamiento")
+async def cancelar_agendamiento_endpoint(request: Request):
+    """
+    Endpoint para cancelar un agendamiento.
+    Espera un JSON con el campo 'agendamiento_id'.
+    """
+    try:
+        data = await request.json()
+        agendamiento_id = data.get("agendamiento_id")
+
+        if not agendamiento_id:
+            raise HTTPException(status_code=400, detail="El campo 'agendamiento_id' es requerido.")
+
+        cancelar_agendamiento_ver(agendamiento_id)
+
+        return {
+            "mensaje": "Agendamiento cancelado exitosamente."
+        }
+
+    except:
+        raise HTTPException(status_code=400, detail="Error al cancelar el agendamiento.")

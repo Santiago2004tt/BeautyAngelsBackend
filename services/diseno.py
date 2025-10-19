@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import jwt
 from jwt import ExpiredSignatureError
@@ -23,7 +23,6 @@ async def get_diseno(diseno_id):
     try:
         disenos = obtener_disenos_por_id(diseno_id)
         return {"diseno": disenos}
-        raise HTTPException(status_code=404, detail="Diseño no encontrado")
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
     

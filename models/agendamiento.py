@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from datetime import datetime, timedelta
 from typing import List
-from db.queries import obtener_horarios_ocupados, crear_agendamiento_con_tintes, obtener_fechas_horas_por_auth_id,obtener_id_usuario
+from db.queries import obtener_horarios_ocupados, cancelar_agendamiento,crear_agendamiento_con_tintes, obtener_fechas_horas_por_auth_id,obtener_id_usuario
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -116,4 +116,6 @@ def obtener_agendamiento_proximo_por_usuario(auth_id: int) -> Optional[dict]:
     agendamientos = obtener_agendamientos_usuario(auth_id)
     return obtener_agendamiento_mas_proximo(agendamientos)
 
-
+#Metodo para cancelar un agendamiento
+def cancelar_agendamiento_ver(agendamiento_id: int): 
+    cancelar_agendamiento(agendamiento_id)

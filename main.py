@@ -4,6 +4,7 @@ from services import auth
 from services import user
 from services import diseno
 from services import agendamiento
+from services import admin
 app = FastAPI()
 
 # Orígenes permitidos
@@ -30,3 +31,4 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(diseno.router)
 app.include_router(agendamiento.router)
+app.include_router(admin.router)

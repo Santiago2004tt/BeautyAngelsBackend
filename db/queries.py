@@ -1,6 +1,7 @@
 from http.client import HTTPException
 import supabase
 from supabase import create_client, Client
+from supabase_auth import datetime
 from db.connection import conectar_db
 import uuid
 from dotenv import load_dotenv
@@ -198,12 +199,14 @@ def obtener_horarios_ocupados(fecha: str):
         return []
 
 
-# Obtener todos los tintes
+# Obtener todos los tintes para el usuario
 def obtener_tintes():
     conn = conectar_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, nombre, descripcion, imagen FROM tintes;
+        SELECT id, nombre, descripcion, imagen 
+        FROM tintes
+        WHERE cant > 3;
     """)
     resultados = cur.fetchall()
     cur.close()
@@ -218,6 +221,82 @@ def obtener_tintes():
         }
         tintes.append(tinte)
     return tintes
+
+# Obtener todos los tintes para el usuario
+def obtener_tintes_admin():
+    conn = conectar_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, nombre, descripcion, imagen, cant
+        FROM tintes;
+    """)
+    resultados = cur.fetchall()
+    cur.close()
+    conn.close()
+    tintes = []
+    for fila in resultados:
+        tinte = {
+            "id": fila[0],
+            "nombre": fila[1],
+            "descripcion": fila[2],
+            "imagen": fila[3],
+            "cant": fila[4]
+        }
+        tintes.append(tinte)
+    return tintes
+
+#Modificar cantidad de tinte usando la variable cant 
+def modificar_cantidad_tinte(tinte_id: int, cantidad: int):
+    """
+    Modifica la cantidad (cant) de un tinte sumando o restando el valor indicado.
+    Si el resultado es menor que 0, la cantidad se deja en 0.
+    Retorna el nuevo valor de 'cant' o None si ocurre un error.
+    """
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        # Obtener cantidad actual
+        cur.execute("SELECT cant FROM tintes WHERE id = %s;", (tinte_id,))
+        resultado = cur.fetchone()
+
+        if not resultado:
+            print("❌ No se encontró el tinte con ese ID.")
+            return None
+
+        cant_actual = resultado[0]
+        nueva_cant = cant_actual + cantidad
+
+        # Evitar cantidades negativas
+        if nueva_cant < 0:
+            nueva_cant = 0
+
+        # Actualizar en base de datos
+        cur.execute(
+            """
+            UPDATE tintes
+            SET cant = %s
+            WHERE id = %s
+            RETURNING cant;
+            """,
+            (nueva_cant, tinte_id)
+        )
+
+        nueva_cant_db = cur.fetchone()[0]
+        conn.commit()
+
+        print(f"✅ Cantidad actualizada correctamente. Nueva cantidad: {nueva_cant_db}")
+        return nueva_cant_db
+
+    except Exception as e:
+        print("❌ Error al modificar cantidad de tinte:", e)
+        return None
+
+    finally:
+        if 'cur' in locals() and cur:
+            cur.close()
+        if 'conn' in locals() and conn:
+            conn.close()
 
 # Crear un nuevo agendamiento
 def crear_agendamiento(usuario_id, diseno_id, fecha, hora, estado="pendiente"):
@@ -448,4 +527,268 @@ def obtener_rol_correo_query(correo: str):
     if resultado:
         return resultado[0]  # Retorna el rol
     else:
+        return None
+
+#Metodo para cancelar agendamiento
+def cancelar_agendamiento(agendamiento_id: str):
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            UPDATE agendamientos
+            SET estado = 'cancelado'
+            WHERE id = %s
+            RETURNING id;
+        """
+        cur.execute(query, (agendamiento_id,))
+        actualizado_id = cur.fetchone()[0]
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return actualizado_id
+    except Exception as e:
+        print("Error al cancelar agendamiento:", e)
+        return None
+    
+#Metodo para obtener todos los agendamientos pendientes del (admin)
+def obtener_agendamientos_pendiente():
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            SELECT id, usuario_id, diseno_id, fecha, hora, estado, creado_en
+            FROM agendamientos
+            WHERE estado = 'pendiente'
+            ORDER BY fecha DESC, hora DESC;
+        """
+        cur.execute(query)
+        resultados = cur.fetchall()
+
+        agendamientos = []
+        for fila in resultados:
+            agendamiento = {
+                "id": str(fila[0]),
+                "usuario_id": str(fila[1]) if fila[1] else None,
+                "diseno_id": str(fila[2]) if fila[2] else None,
+                "fecha": fila[3].strftime("%Y-%m-%d") if fila[3] else None,
+                "hora": fila[4].strftime("%H:%M") if fila[4] else None,
+                "estado": fila[5],
+                "creado_en": fila[6].strftime("%Y-%m-%d %H:%M:%S") if fila[6] else None
+            }
+            agendamientos.append(agendamiento)
+
+        cur.close()
+        conn.close()
+
+        return agendamientos
+
+    except Exception as e:
+        print("Error al obtener agendamientos:", e)
+
+#Metodo para obtener todos los agendamientos (admin)
+def obtener_agendamientos():
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            SELECT id, usuario_id, diseno_id, fecha, hora, estado, creado_en
+            FROM agendamientos
+            ORDER BY fecha DESC, hora DESC;
+        """
+        cur.execute(query)
+        resultados = cur.fetchall()
+
+        agendamientos = []
+        for fila in resultados:
+            agendamiento = {
+                "id": str(fila[0]),
+                "usuario_id": str(fila[1]) if fila[1] else None,
+                "diseno_id": str(fila[2]) if fila[2] else None,
+                "fecha": fila[3].strftime("%Y-%m-%d") if fila[3] else None,
+                "hora": fila[4].strftime("%H:%M") if fila[4] else None,
+                "estado": fila[5],
+                "creado_en": fila[6].strftime("%Y-%m-%d %H:%M:%S") if fila[6] else None
+            }
+            agendamientos.append(agendamiento)
+
+        cur.close()
+        conn.close()
+
+        return agendamientos
+
+    except Exception as e:
+        print("Error al obtener agendamientos:", e)
+
+#Buscar agendamiento por nombre de usuario
+def obtener_agendamiento_por_nombre(nombre: str):
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            SELECT ag.id, ag.usuario_id, ag.diseno_id, ag.fecha, ag.hora, ag.estado, ag.creado_en
+            FROM agendamientos ag
+            JOIN usuarios u ON ag.usuario_id = u.id
+            WHERE u.nombre ILIKE %s
+            ORDER BY ag.fecha DESC, ag.hora DESC;
+        """
+        cur.execute(query, (f"%{nombre}%",))
+        resultados = cur.fetchall()
+
+        agendamientos = []
+        for fila in resultados:
+            agendamiento = {
+                "id": str(fila[0]),
+                "usuario_id": str(fila[1]) if fila[1] else None,
+                "diseno_id": str(fila[2]) if fila[2] else None,
+                "fecha": fila[3].strftime("%Y-%m-%d") if fila[3] else None,
+                "hora": fila[4].strftime("%H:%M") if fila[4] else None,
+                "estado": fila[5],
+                "creado_en": fila[6].strftime("%Y-%m-%d %H:%M:%S") if fila[6] else None
+            }
+            agendamientos.append(agendamiento)
+
+        cur.close()
+        conn.close()
+
+        return agendamientos
+
+    except Exception as e:
+        print("Error al obtener agendamientos por nombre:", e)
+        return []
+    
+
+def cambiar_estado_agendamiento(agendamiento_id: str, nuevo_estado: str):
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            UPDATE agendamientos
+            SET estado = %s
+            WHERE id = %s
+            RETURNING id, estado;
+        """
+        cur.execute(query, (nuevo_estado, agendamiento_id))
+        resultado = cur.fetchone()
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        if resultado:
+            return {
+                "id": str(resultado[0]),
+                "estado": resultado[1]
+            }
+        else:
+            return None
+
+    except Exception as e:
+        print("Error al cambiar estado de agendamiento:", e)
+        return None
+    
+def actualizar_agendamientos_expirados():
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        # Obtenemos la fecha y hora actual
+        ahora = datetime.now()
+
+        # Actualizamos todos los agendamientos que ya pasaron
+        query = """
+            UPDATE agendamientos
+            SET estado = 'expiro'
+            WHERE (fecha + hora) < %s
+              AND estado NOT IN ('cancelado', 'expiro')
+            RETURNING id, fecha, hora;
+        """
+        cur.execute(query, (ahora,))
+        resultados = cur.fetchall()
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        # Retorna los IDs actualizados
+        if resultados:
+            return [
+                {"id": str(f[0]), "fecha": str(f[1]), "hora": str(f[2])}
+                for f in resultados
+            ]
+        else:
+            return []
+
+    except Exception as e:
+        print("Error al actualizar agendamientos expirados:", e)
+        return None
+
+#Obtener agendamiento detallado por id (admin)
+def obtener_agendamiento_detallado(agendamiento_id: str):
+    """
+    Obtiene la información detallada de un agendamiento con la lista completa de tintes asociados.
+    """
+    try:
+        conn = conectar_db()
+        cur = conn.cursor()
+
+        query = """
+            SELECT 
+                u.nombre AS usuario_nombre,
+                ag.fecha,
+                ag.hora,
+                ag.estado,
+                d.descripcion AS diseno_descripcion,
+                t.id AS tinte_id,
+                t.nombre AS tinte_nombre,
+                t.imagen AS tinte_imagen,
+                d.precio_estimado
+            FROM agendamientos ag
+            JOIN usuarios u ON u.id = ag.usuario_id
+            JOIN disenos d ON d.id = ag.diseno_id
+            JOIN agendamiento_tinte at ON at.agendamiento_id = ag.id
+            JOIN tintes t ON t.id = at.tinte_id
+            WHERE ag.id = %s;
+        """
+
+        cur.execute(query, (agendamiento_id,))
+        filas = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        if not filas:
+            return None
+
+        # Tomamos los datos comunes de la primera fila
+        primera = filas[0]
+        agendamiento = {
+            "usuario_nombre": primera[0],
+            "fecha": primera[1].strftime("%Y-%m-%d") if primera[1] else None,
+            "hora": primera[2].strftime("%H:%M") if primera[2] else None,
+            "estado": primera[3],
+            "diseno_descripcion": primera[4],
+            "tintes": [],
+            "precio_estimado": float(primera[8]) if primera[8] is not None else None
+        }
+
+        # Recorremos todas las filas y acumulamos los tintes
+        for f in filas:
+            tinte = {
+                "id": str(f[5]) if f[5] is not None else None,
+                "nombre": f[6],
+                "imagen": f[7]
+            }
+            agendamiento["tintes"].append(tinte)
+
+        return agendamiento
+
+    except Exception as e:
+        print("❌ Error al obtener agendamiento detallado:", e)
         return None
