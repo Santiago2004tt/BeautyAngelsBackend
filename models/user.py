@@ -1,3 +1,4 @@
+import resend
 from exception.user_exception import (
     UsuarioError,
     CorreoInvalido,
@@ -6,12 +7,12 @@ from exception.user_exception import (
 )
 from models.user_service import verificar_contrasenia_escrito, verificar_email
 from db.queries import registrar_usuario, obtener_rol_correo_query,obtener_datos_usuario_por_id ,iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_agendamientos_por_usuario_id
-import smtplib
+
 import random
 import os
-from email.mime.text import MIMEText
+
 from dotenv import load_dotenv
-from email.mime.multipart import MIMEMultipart
+
 
 # Función para crear un nuevo usuario con validaciones
 def crear_usuario(correo: str, nombre: str, telefono: str, password: str):
@@ -81,16 +82,33 @@ def verificar_codigo(id_auth: str, codigo: str):
             raise UsuarioError("El código de verificación es incorrecto.")
 
 # Función para enviar el correo
-def enviar_correo(destinatario, codigo):
-    load_dotenv()
-    remitente = os.getenv("CORREO")
-    contraseña = os.getenv("CONTRASENIA")
+def enviar_correo(destinatario: str, codigo: str):
+    """
+    Envía un correo con el código de verificación usando la API de Resend.
+    Compatible con Render (sin SMTP).
+    """
 
-     # ✨ HTML del correo
+    # ==============================
+    # 1️⃣ Cargar variables de entorno
+    # ==============================
+    load_dotenv()
+    resend.api_key = os.getenv("CONTRASENIA")
+    remitente = os.getenv("CORREO")  # tu correo remitente, ej: "tucorreo@beautyangels.com"
+
+    if not resend.api_key:
+        raise ValueError("⚠️ Falta la variable RESEND_API_KEY en las variables de entorno.")
+    if not remitente:
+        raise ValueError("⚠️ Falta la variable CORREO en las variables de entorno.")
+
+    # ==============================
+    # 2️⃣ Construir el HTML del correo
+    # ==============================
     html = f"""
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #f4f4f7; padding: 20px;">
-        <div style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 30px; text-align: center;">
+        <div style="max-width: 600px; margin: auto; background-color: #ffffff; 
+                    border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+                    padding: 30px; text-align: center;">
             <h2 style="color: #c69838;">¡Hola!</h2>
             <p style="font-size: 16px; color: #555;">
                 Tu <strong>código de verificación</strong> es:
@@ -110,24 +128,21 @@ def enviar_correo(destinatario, codigo):
     </html>
     """
 
-    # Crear el mensaje
-    mensaje = MIMEMultipart("alternative")
-    mensaje["Subject"] = "Tu código de verificación"
-    mensaje["From"] = remitente
-    mensaje["To"] = destinatario
-
-    # Adjuntar el contenido HTML
-    mensaje.attach(MIMEText(html, "html"))
-
-    # Enviar
+    # ==============================
+    # 3️⃣ Enviar correo con Resend
+    # ==============================
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as servidor:
-            servidor.starttls()
-            servidor.login(remitente, contraseña)
-            servidor.sendmail(remitente, destinatario, mensaje.as_string())
-        print("✅ Correo enviado con éxito")
+        resend.Emails.send({
+            "from": remitente,
+            "to": [destinatario],
+            "subject": "Tu código de verificación",
+            "html": html,
+        })
+
+        print(f"✅ Correo enviado exitosamente a {destinatario}")
+
     except Exception as e:
-        print("❌ Error al enviar el correo:", e)
+        print("❌ Error al enviar el correo con Resend:", e)
             
 
 #Obtener datos del usuario
