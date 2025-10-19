@@ -1,4 +1,4 @@
-import resend
+
 from exception.user_exception import (
     UsuarioError,
     CorreoInvalido,
@@ -7,9 +7,8 @@ from exception.user_exception import (
 )
 from models.user_service import verificar_contrasenia_escrito, verificar_email
 from db.queries import registrar_usuario, obtener_rol_correo_query,obtener_datos_usuario_por_id ,iniciar_sesion, obtener_nombre_usuario,guardar_codigo_verificacion,obtener_id_usuario,obtener_correo_usuario, obtener_codigo_verificacion, obtener_agendamientos_por_usuario_id
-
+from utils.correo import enviar_correo_agendamiento as enviar_correo
 import random
-import os
 
 from dotenv import load_dotenv
 
@@ -81,69 +80,7 @@ def verificar_codigo(id_auth: str, codigo: str):
             
             raise UsuarioError("El código de verificación es incorrecto.")
 
-# Función para enviar el correo
-def enviar_correo(destinatario: str, codigo: str):
-    """
-    Envía un correo con el código de verificación usando la API de Resend.
-    Compatible con Render (sin SMTP).
-    """
 
-    # ==============================
-    # 1️⃣ Cargar variables de entorno
-    # ==============================
-    load_dotenv()
-    resend.api_key = os.getenv("CONTRASENIA")
-    remitente = os.getenv("CORREO")  # tu correo remitente, ej: "tucorreo@beautyangels.com"
-
-    if not resend.api_key:
-        raise ValueError("⚠️ Falta la variable RESEND_API_KEY en las variables de entorno.")
-    if not remitente:
-        raise ValueError("⚠️ Falta la variable CORREO en las variables de entorno.")
-
-    # ==============================
-    # 2️⃣ Construir el HTML del correo
-    # ==============================
-    html = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; background-color: #f4f4f7; padding: 20px;">
-        <div style="max-width: 600px; margin: auto; background-color: #ffffff; 
-                    border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-                    padding: 30px; text-align: center;">
-            <h2 style="color: #c69838;">¡Hola!</h2>
-            <p style="font-size: 16px; color: #555;">
-                Tu <strong>código de verificación</strong> es:
-            </p>
-            <div style="font-size: 36px; font-weight: bold; color: #c69838; margin: 20px 0;">
-                {codigo}
-            </div>
-            <p style="font-size: 14px; color: #999;">
-                Este código expirará en 10 minutos. No lo compartas con nadie.
-            </p>
-            <hr style="margin: 30px 0;">
-            <p style="font-size: 12px; color: #aaa;">
-                © 2025 BeautyAngels — Todos los derechos reservados
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-
-    # ==============================
-    # 3️⃣ Enviar correo con Resend
-    # ==============================
-    try:
-        resend.Emails.send({
-            "from": remitente,
-            "to": [destinatario],
-            "subject": "Tu código de verificación",
-            "html": html,
-        })
-
-        print(f"✅ Correo enviado exitosamente a {destinatario}")
-
-    except Exception as e:
-        print("❌ Error al enviar el correo con Resend:", e)
-            
 
 #Obtener datos del usuario
 def obtener_datos_usuario(id_auth: str):
