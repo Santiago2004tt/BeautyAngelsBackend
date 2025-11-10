@@ -7,7 +7,8 @@ app = FastAPI()
 # 🟢 Agrega todos los orígenes posibles
 origins = [
     "http://localhost:3000",                # React local
-    "http://127.0.0.1:3000",                # Alternativo local
+    "http://127.0.0.1:3000",  
+    "http://18.222.144.90:3000",              # Alternativo local
     "https://beauty-angels-frontend.vercel.app",  # Tu frontend desplegado
     "https://beautyangelsbackend.onrender.com"    # Backend render (para preflight correcto)
 ]
